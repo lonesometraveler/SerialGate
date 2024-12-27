@@ -5,6 +5,9 @@ public enum SGError: LocalizedError {
     case portIsNotOpen(String)
     case couldNotClosePort(String)
     case couldNotSetOptions(String)
+    case invalidData
+    case writeFailed(Int32)
+    case encodingFailed(String)
 
     public var errorDescription: String? {
         switch self {
@@ -16,6 +19,12 @@ public enum SGError: LocalizedError {
             return "Could not close port (\(portName))."
         case .couldNotSetOptions(let portName):
             return "Could not set options to port (\(portName))."
+        case .invalidData:
+            return "Invalid Data"
+        case .writeFailed(let errorCode):
+            return "Failed to write with error code \(errorCode)"
+        case .encodingFailed(let errorMessage):
+            return errorMessage
         }
     }
 }
