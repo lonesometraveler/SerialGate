@@ -87,13 +87,30 @@ public final class SGPort: Hashable, Identifiable {
     }
 
     public func send(_ text: String) throws {
+        guard let data = text.data(using: .utf8) else {
+            throw SGError.encodingFailed("Failed to encode string: '\(text)' as UTF-8")
+        }
+        let _ = try sendData(data)
+    }
+
+    public func sendData(_ data: Data) throws -> Int {
         if state != .open {
             throw SGError.portIsNotOpen(name)
         }
-        var bytes: [UInt32] = text.unicodeScalars.map { uni -> UInt32 in
-            return uni.value
+        return try data.withUnsafeBytes { bufferPointer in
+            guard let baseAddress = bufferPointer.baseAddress else {
+                throw SGError.invalidData
+            }
+            return try writeBytes(baseAddress, count: data.count)
         }
-        Darwin.write(fileDescriptor, &bytes, bytes.count)
+    }
+
+    private func writeBytes(_ pointer: UnsafeRawPointer, count: Int) throws -> Int {
+        let bytesWritten = Darwin.write(fileDescriptor, pointer, count)
+        if bytesWritten == -1 {
+            throw SGError.writeFailed(errno)
+        }
+        return bytesWritten
     }
 
     // MARK: Set Options
