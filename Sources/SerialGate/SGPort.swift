@@ -5,6 +5,7 @@ public final class SGPort: Hashable, Identifiable {
     private var fileDescriptor: Int32 = 0
     private var originalPortOptions = termios()
     private var readTimer: DispatchSourceTimer?
+    private var isClosing = false
 
     public private(set) var name: String = ""
     public private(set) var state: SGPortState = .close
@@ -59,7 +60,6 @@ public final class SGPort: Hashable, Identifiable {
         })
         readTimer?.setCancelHandler(handler: { [weak self] in
             do {
-                // TODO: closeするとCancelされるから循環しているかも
                 try self?.close()
             } catch {
                 logput(error.localizedDescription)
@@ -71,19 +71,25 @@ public final class SGPort: Hashable, Identifiable {
     }
 
     public func close() throws {
+        guard !isClosing && state != .close else { return }
+        isClosing = true
+        
         readTimer?.cancel()
         readTimer = nil
         if tcdrain(fileDescriptor) == -1 {
+            isClosing = false
             throw SGError.couldNotClosePort(name)
         }
         var options = termios()
         if tcsetattr(fileDescriptor, TCSADRAIN, &options) == -1 {
+            isClosing = false
             throw SGError.couldNotClosePort(name)
         }
         Darwin.close(fileDescriptor)
         state = SGPortState.close
         fileDescriptor = -1
         changedPortStateSubject.send(.close)
+        isClosing = false
     }
 
     public func send(_ text: String) throws {
