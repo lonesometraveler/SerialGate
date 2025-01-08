@@ -1,6 +1,6 @@
 public enum SGPortState: String {
     case open
-    case close
+    case closed
     case sleeping
     case removed
 }
