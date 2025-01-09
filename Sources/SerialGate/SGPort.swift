@@ -25,6 +25,11 @@ public final class SGPort: Hashable, Identifiable {
     public var receivedTextPublisher: AnyPublisher<(SGError?, String?), Never> {
         return receivedTextSubject.eraseToAnyPublisher()
     }
+    
+    private let receivedDataSubject = PassthroughSubject<(SGError?, Data?), Never>()
+    public var receivedDataPublisher: AnyPublisher<(SGError?, Data?), Never> {
+        return receivedDataSubject.eraseToAnyPublisher()
+    }
 
     init(_ portName: String) {
         name = portName
@@ -231,6 +236,7 @@ public final class SGPort: Hashable, Identifiable {
     // MARK: Private Function
     private func read() {
         guard state == .open else {
+            receivedDataSubject.send((SGError.portIsNotOpen(name), nil))
             receivedTextSubject.send((SGError.portIsNotOpen(name), nil))
             return
         }
@@ -238,8 +244,17 @@ public final class SGPort: Hashable, Identifiable {
         let readLength = Darwin.read(fileDescriptor, &buffer, 1024)
         if readLength < 1 { return }
         let data = Data(bytes: buffer, count: readLength)
+        
+        receivedDataSubject.send((nil, data))
+        
         let text = String(data: data, encoding: .ascii)!
         receivedTextSubject.send((nil, text))
+        
+        if let text = String(data: data, encoding: .ascii) {
+            receivedTextSubject.send((nil, text))
+        } else {
+            receivedTextSubject.send((SGError.encodingFailed("Failed to decode data as ASCII string"), nil))
+        }
     }
 
     // MARK: Equatable
