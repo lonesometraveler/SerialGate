@@ -247,9 +247,6 @@ public final class SGPort: Hashable, Identifiable {
         
         receivedDataSubject.send((nil, data))
         
-        let text = String(data: data, encoding: .ascii)!
-        receivedTextSubject.send((nil, text))
-        
         if let text = String(data: data, encoding: .ascii) {
             receivedTextSubject.send((nil, text))
         } else {
