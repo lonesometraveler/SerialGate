@@ -8,7 +8,7 @@ public final class SGPort: Hashable, Identifiable {
     private var isClosing = false
 
     public private(set) var name: String = ""
-    public private(set) var state: SGPortState = .close
+    public private(set) var state: SGPortState = .closed
     public private(set) var baudRate: Int32 = B9600
     public private(set) var parity: SGParity = .none
     public private(set) var stopBits: UInt32 = 1
@@ -71,7 +71,7 @@ public final class SGPort: Hashable, Identifiable {
     }
 
     public func close() throws {
-        guard !isClosing && state != .close else { return }
+        guard !isClosing && state != .closed else { return }
         isClosing = true
         
         readTimer?.cancel()
@@ -86,9 +86,9 @@ public final class SGPort: Hashable, Identifiable {
             throw SGError.couldNotClosePort(name)
         }
         Darwin.close(fileDescriptor)
-        state = SGPortState.close
+        state = SGPortState.closed
         fileDescriptor = -1
-        changedPortStateSubject.send(.close)
+        changedPortStateSubject.send(.closed)
         isClosing = false
     }
 
